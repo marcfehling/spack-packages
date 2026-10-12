@@ -32,6 +32,7 @@ class Dealii(CMakePackage, CudaPackage):
     generator("make")
 
     version("master", branch="master")
+    version("9.8.0", sha256="d8d66aac57baad145a752d3f11cf72cfa9457e3f99ae09e5c8d5c9259a83aee1")
     version("9.7.1", sha256="0f2096ef83db54fdcebe9f3d148fa713f63f1c3f567941b53bcb4a1a8ea7de43")
     version("9.7.0", sha256="398ffbb5de1ea52b88a47aaa54a253ad58ee4e810a8c5aa0a0f549ecb1bc4c6c")
     version("9.6.2", sha256="1051e332de3822488e91c2b0460681052a3c4c5ac261cdd7a6af784869a25523")
@@ -111,6 +112,7 @@ class Dealii(CMakePackage, CudaPackage):
     variant("gsl", default=True, description="Compile with GSL")
     variant("hdf5", default=True, description="Compile with HDF5 (only with MPI)")
     variant("kokkos", default=True, when="@9.5:", description="Compile with Kokkos")
+    variant("magic-enum", default=True, when="@9.7:", description="Compile with Magic Enum")
     variant("metis", default=True, description="Compile with Metis")
     variant("muparser", default=True, description="Compile with muParser")
     variant("nanoflann", default=False, description="Compile with Nanoflann")
@@ -118,6 +120,9 @@ class Dealii(CMakePackage, CudaPackage):
     variant("opencascade", default=True, description="Compile with OPENCASCADE")
     variant("p4est", default=True, description="Compile with P4est (only with MPI)")
     variant("petsc", default=True, description="Compile with Petsc (only with MPI)")
+    variant(
+        "psblas", default=True, when="@9.8:", description="Compile with PSBLAS (only with MPI)"
+    )
     variant("scalapack", default=True, description="Compile with ScaLAPACK (only with MPI)")
     variant("sundials", default=True, description="Compile with Sundials", when="@9.3:")
     variant("slepc", default=True, description="Compile with Slepc (only with Petsc and MPI)")
@@ -218,6 +223,7 @@ class Dealii(CMakePackage, CudaPackage):
     depends_on(
         "kokkos@3.7:+cuda+cuda_lambda+cuda_constexpr+wrapper", when="@9.6:+kokkos~trilinos+cuda"
     )
+    depends_on("magic-enum", when="@9.7:+magic-enum")
     # TODO: concretizer bug. The two lines mimic what comes from PETSc
     # but we should not need it
     depends_on("metis@5:+int64", when="+metis+int64")
@@ -231,6 +237,7 @@ class Dealii(CMakePackage, CudaPackage):
     depends_on("p4est", when="+p4est+mpi")
     depends_on("petsc@:3.24+mpi~int64", when="+petsc+mpi~int64")
     depends_on("petsc@:3.24+mpi+int64", when="+petsc+mpi+int64")
+    depends_on("psblas@3.9:", when="@9.8:+psblas+mpi")
     depends_on("scalapack", when="@9.0:+scalapack")
     depends_on("slepc", when="+slepc+petsc+mpi")
     depends_on("slepc~arpack", when="+slepc+petsc+mpi+int64")
@@ -413,6 +420,7 @@ class Dealii(CMakePackage, CudaPackage):
         "netcdf",
         "p4est",
         "petsc",
+        "psblas",
         "scalapack",
         "slepc",
         "trilinos",
@@ -596,6 +604,7 @@ class Dealii(CMakePackage, CudaPackage):
             "nanoflann",
             "p4est",
             "petsc",
+            "psblas",
             "slepc",
             "sundials",
             "symengine",
@@ -626,6 +635,11 @@ class Dealii(CMakePackage, CudaPackage):
                     self.define("DEAL_II_ARPACK_WITH_PARPACK", True),
                 ]
             )
+
+        # Magic Enum
+        options.append(self.define_from_variant("DEAL_II_WITH_MAGIC_ENUM", "magic-enum"))
+        if "+magic-enum" in spec:
+            options.append(self.define("MAGIC_ENUM_DIR", spec["magic-enum"].prefix))
 
         # NetCDF
         # since Netcdf is spread among two, need to do it by hand:
